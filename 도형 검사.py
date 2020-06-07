@@ -64,7 +64,7 @@ def maskImage(frame, h, error, sMin, vMin):
     return gray
 
 def findShapes(shapeStr, gray, low, high, original, BGR):
-    cnts, hierachy = cv2.findContours(gray.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cnts, hierachy = cv2.findContours(gray.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     ratio = 1 # ratio = image.shape[0] / float(resized.shape[0])
     found = 0
 
@@ -94,7 +94,7 @@ def putTextAtCenter(frame, text, color):
 
     cv2.putText(frame, text, (int(x), int(y)), cv2.FONT_HERSHEY_SIMPLEX, 2, color, 2)
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
 height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 cv2.namedWindow("Result")
@@ -110,17 +110,19 @@ while cap.isOpened():
         low = cv2.getTrackbarPos('Mininum Area', 'Result')
         high = cv2.getTrackbarPos('Maxinum Area', 'Result')
 
-        redMasked = maskImage(frame, 0, 10, 180, 128)
-        yellowMasked = maskImage(frame, 30, 20, 120, 60)
-        greenMasked = maskImage(frame, 60, 30, 90, 60)
+        redMasked = maskImage(frame, 0, 15, 180, 128)
+        yellowMasked = maskImage(frame, 30, 15, 120, 60)
+        greenMasked = maskImage(frame, 60, 15, 90, 60)
+        greenInverse = 255 - greenMasked
+
         cv2.imshow("Found Red", redMasked)
         cv2.imshow("Found Yellow", yellowMasked)
         cv2.imshow("Found Green", greenMasked)
 
         redCount = findShapes("Circle", redMasked, low, high, frame, (0, 0, 255))
         yellowCount = findShapes("Circle", yellowMasked, low, high, frame, (131, 232, 252))
-        leftCount = findShapes("Left", greenMasked, low, high, frame, (0, 255, 0))
-        rightCount = findShapes("Right", greenMasked, low, high, frame, (0, 255, 0))
+        leftCount = findShapes("Left", greenInverse, low, high, frame, (0, 255, 0))
+        rightCount = findShapes("Right", greenInverse, low, high, frame, (0, 255, 0))
         greenCount = findShapes("Circle", greenMasked, low, high, frame, (0, 255, 0))
 
         if redCount > 0:
@@ -129,9 +131,9 @@ while cap.isOpened():
             putTextAtCenter(frame, "Yellow Light!", (131, 232, 252))
         if leftCount > 0:
             putTextAtCenter(frame, "Left Direction!", (0, 255, 0))
-        if rightCount > 0:
+        elif rightCount > 0:
             putTextAtCenter(frame, "Right Direction!", (0, 255, 0))
-        if greenCount > 0:
+        elif greenCount > 0:
             putTextAtCenter(frame, "Green Light!", (0, 255, 0))
         
         cv2.imshow("Result", frame)
