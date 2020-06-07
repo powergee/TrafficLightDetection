@@ -15,14 +15,6 @@ def labelPolygon(c, area):
     peri = cv2.arcLength(c, True)
     approx = cv2.approxPolyDP(c, 0.02 * peri, True)
 
-    #if len(approx) == 3:
-    #    shape == "triangle"
-
-    #elif len(approx) == 4:
-    #    (x, y, w, h) = cv2.boundingRect(approx)
-    #    ar = w / float(h)
-    #    shape = "sqaure" if ar >= 0.95 and ar <= 1.05 else "rectangle"
-
     if len(approx) == 7:
         center = sum(approx) / 7
         leftCount = rightCount = 0
@@ -118,18 +110,12 @@ while cap.isOpened():
         low = cv2.getTrackbarPos('Mininum Area', 'Result')
         high = cv2.getTrackbarPos('Maxinum Area', 'Result')
 
-        redMasked = maskImage(frame, 0, 15, 180, 128)
-        yellowMasked = maskImage(frame, 30, 15, 120, 60)
-        greenMasked = maskImage(frame, 60, 30, 120, 60)
+        redMasked = maskImage(frame, 0, 10, 180, 128)
+        yellowMasked = maskImage(frame, 30, 20, 120, 60)
+        greenMasked = maskImage(frame, 60, 30, 90, 60)
         cv2.imshow("Found Red", redMasked)
         cv2.imshow("Found Yellow", yellowMasked)
         cv2.imshow("Found Green", greenMasked)
-
-        # 간선 추출
-        '''gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        thresh = cv2.blur(gray, (5, 5))
-        cv2.threshold(thresh,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU,thresh)
-        cv2.imshow("Binary", thresh)'''
 
         redCount = findShapes("Circle", redMasked, low, high, frame, (0, 0, 255))
         yellowCount = findShapes("Circle", yellowMasked, low, high, frame, (131, 232, 252))
