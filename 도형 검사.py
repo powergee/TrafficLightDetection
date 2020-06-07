@@ -65,21 +65,17 @@ def maskImage(frame, h, error, sMin, vMin):
 
 def findShapes(shapeStr, gray, low, high, original, BGR):
     cnts, hierachy = cv2.findContours(gray.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-    ratio = 1 # ratio = image.shape[0] / float(resized.shape[0])
     found = 0
 
     for c in cnts:
         M = cv2.moments(c)
 
         if low <= M["m00"] <= high:
-            cX = int(M["m10"] / M["m00"] * ratio)
-            cY = int(M["m01"] / M["m00"] * ratio)
+            cX = int(M["m10"] / M["m00"])
+            cY = int(M["m01"] / M["m00"])
             shape = labelPolygon(c, M["m00"])
 
             if shape == shapeStr:
-                c = c.astype("float")
-                c *= ratio
-                c = c.astype("int")
                 cv2.drawContours(original, [c], -1, BGR, 2)
                 cv2.putText(original, shape, (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
                 found = found + 1
@@ -110,10 +106,9 @@ while cap.isOpened():
         low = cv2.getTrackbarPos('Mininum Area', 'Result')
         high = cv2.getTrackbarPos('Maxinum Area', 'Result')
 
-        redMasked = maskImage(frame, 0, 15, 180, 128)
+        redMasked = maskImage(frame, 0, 15, 150, 100)
         yellowMasked = maskImage(frame, 30, 15, 120, 60)
         greenMasked = maskImage(frame, 60, 15, 90, 60)
-        greenInverse = 255 - greenMasked
 
         cv2.imshow("Found Red", redMasked)
         cv2.imshow("Found Yellow", yellowMasked)
@@ -121,14 +116,15 @@ while cap.isOpened():
 
         redCount = findShapes("Circle", redMasked, low, high, frame, (0, 0, 255))
         yellowCount = findShapes("Circle", yellowMasked, low, high, frame, (131, 232, 252))
-        leftCount = findShapes("Left", greenInverse, low, high, frame, (0, 255, 0))
-        rightCount = findShapes("Right", greenInverse, low, high, frame, (0, 255, 0))
+        leftCount = findShapes("Left", greenMasked, low, high, frame, (0, 255, 0))
+        rightCount = findShapes("Right", greenMasked, low, high, frame, (0, 255, 0))
         greenCount = findShapes("Circle", greenMasked, low, high, frame, (0, 255, 0))
 
         if redCount > 0:
             putTextAtCenter(frame, "Red Light!", (0, 0, 255))
         if yellowCount > 0:
             putTextAtCenter(frame, "Yellow Light!", (131, 232, 252))
+
         if leftCount > 0:
             putTextAtCenter(frame, "Left Direction!", (0, 255, 0))
         elif rightCount > 0:
