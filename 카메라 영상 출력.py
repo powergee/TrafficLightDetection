@@ -11,8 +11,8 @@ cap = cv2.VideoCapture(0)
 
 origWidth = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
 origHeight = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, origWidth / 2)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, origWidth / 2)
+# cap.set(cv2.CAP_PROP_FRAME_WIDTH, origWidth / 2)
+# cap.set(cv2.CAP_PROP_FRAME_HEIGHT, origHeight / 2)
 
 while cap.isOpened():
     success, frame = cap.read()

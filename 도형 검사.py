@@ -71,7 +71,7 @@ def findShapes(shapeStr, gray, low, high, original, BGR):
     for c in cnts:
         M = cv2.moments(c)
 
-        if low <= M["m00"] <= high:
+        if M["m00"] != 0 and low <= M["m00"] <= high:
             cX = int(M["m10"] / M["m00"] * ratio)
             cY = int(M["m01"] / M["m00"] * ratio)
             shape = labelPolygon(c, M["m00"])
@@ -94,21 +94,21 @@ def putTextAtCenter(frame, text, color):
 
     cv2.putText(frame, text, (int(x), int(y)), cv2.FONT_HERSHEY_SIMPLEX, 2, color, 2)
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
 height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 cv2.namedWindow("Result")
-cv2.createTrackbar('Mininum Area', "Result", 10, 100000, onChange)
-cv2.createTrackbar('Maxinum Area', "Result", 10, 100000, onChange)
+cv2.createTrackbar('Minimum Area', "Result", 10, 100000, onChange)
+cv2.createTrackbar('Maximum Area', "Result", 10, 100000, onChange)
 
-cv2.setTrackbarPos('Mininum Area', 'Result', 1000)
-cv2.setTrackbarPos('Maxinum Area', 'Result', 100000)
+cv2.setTrackbarPos('Minimum Area', 'Result', 1000)
+cv2.setTrackbarPos('Maximum Area', 'Result', 100000)
 
 while cap.isOpened():
     success, frame = cap.read()
     if success:
-        low = cv2.getTrackbarPos('Mininum Area', 'Result')
-        high = cv2.getTrackbarPos('Maxinum Area', 'Result')
+        low = cv2.getTrackbarPos('Minimum Area', 'Result')
+        high = cv2.getTrackbarPos('Maximum Area', 'Result')
 
         redMasked = maskImage(frame, 0, 15, 180, 128)
         yellowMasked = maskImage(frame, 30, 15, 120, 60)
