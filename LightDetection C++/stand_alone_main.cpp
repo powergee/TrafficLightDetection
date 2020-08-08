@@ -3,6 +3,7 @@
 #include <opencv2/opencv.hpp>
 
 enum Shape { Circle, Left, Right, Undefined };
+typedef std::vector<cv::Point> Contour;
 
 cv::Mat maskImage(cv::Mat& frame, int h, int error, int sMin, int vMin)
 {
@@ -40,18 +41,42 @@ cv::Mat maskImage(cv::Mat& frame, int h, int error, int sMin, int vMin)
     return grey;
 }
 
-bool isConvex(std::vector<cv::Point>& c, double area)
+// int calcCCW(cv::Point p1, cv::Point p2, cv::Point p3)
+// {
+//     return p1.x*p2.y + p2.x*p3.y + p3.x*p1.y - p1.y*p2.x - p2.y*p3.x - p3.y*p1.x;
+// }
+
+// bool isConvex(std::vector<cv::Point>& c)
+// {
+//     if (c.size() < 3)
+//         return false;
+    
+//     bool dir = calcCCW(c[0], c[1], c[2]) >= 0;
+//     for (int i = 1; i < (int)c.size(); ++i)
+//     {
+//         int c1 = i;
+//         int c2 = (i + 1) % (int)c.size();
+//         int c3 = (i + 2) % (int)c.size();
+
+//         if (dir != (calcCCW(c[c1], c[c2], c[c3]) >= 0))
+//             return false;
+//     }
+
+//     return true;
+// }
+
+bool isConvex(Contour& c, double area)
 {
-    std::vector<cv::Point> hull;
+    Contour hull;
     cv::convexHull(c, hull);
     double areaOfHull = cv::moments(hull).m00;
     return abs(areaOfHull - area) / area <= 0.1;
 }
 
-Shape labelPolygon(std::vector<cv::Point>& c, double area)
+Shape labelPolygon(Contour& c, double area)
 {
     double peri = cv::arcLength(c, true);
-    std::vector<cv::Point> approx;
+    Contour approx;
     cv::approxPolyDP(c, approx, 0.02*peri, true);
 
     if ((int)approx.size() == 7)
@@ -100,36 +125,26 @@ std::string shapeToString(Shape s)
     return "Error";
 }
 
-bool findShapes(Shape shapeToFind, cv::Mat& grey, int low, int high, cv::Mat& original, cv::Scalar colorToDraw)
+std::vector<Contour> findShapes(Shape shapeToFind, cv::Mat& grey, int minArea, int maxArea)
 {
-    std::vector<std::vector<cv::Point>> contours;
+    std::vector<Contour> contours;
     cv::findContours(grey, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
-    std::vector<std::vector<cv::Point>> consToDraw;
+    std::vector<Contour> found;
     
     for (auto c : contours)
     {
         cv::Moments m;
         m = cv::moments(c);
         
-        if (m.m00 != 0 && low <= m.m00 && m.m00 <= high)
+        if (m.m00 != 0 && minArea <= m.m00 && m.m00 <= maxArea)
         {
-            double cX = m.m10/m.m00;
-            double cY = m.m01/m.m00;
             Shape shape = labelPolygon(c, m.m00);
-
             if (shape == shapeToFind)
-            {
-                consToDraw.push_back(c);
-                cv::putText(original, shapeToString(shape), cv::Point(cX, cY), cv::FONT_HERSHEY_SIMPLEX, 0.5, colorToDraw, 2);
-            }
+                found.push_back(c);
         }
     }
 
-    if (consToDraw.empty())
-        return false;
-    
-    cv::drawContours(original, consToDraw, -1, colorToDraw, 2);
-    return true;
+    return found;
 }
 
 void putTextAtCenter(cv::Mat& frame, std::string text, cv::Scalar color)
@@ -171,22 +186,25 @@ int main()
             cv::imshow("Found Green", greenMasked);
             cv::imshow("Found Green (Inverse)", greenInverse);
 
-            bool foundRed = findShapes(Shape::Circle, redMasked, minArea, maxArea, frame, cv::Scalar(0, 0, 222));
-            bool foundYellow = findShapes(Shape::Circle, yellowMasked, minArea, maxArea, frame, cv::Scalar(131, 232, 252));
-            bool foundGreen = findShapes(Shape::Circle, greenMasked, minArea, maxArea, frame, cv::Scalar(0, 255, 0));
-            bool foundLeft = findShapes(Shape::Left, greenInverse, minArea, maxArea, frame, cv::Scalar(0, 255, 0));
-            bool foundRight = findShapes(Shape::Right, greenInverse, minArea, maxArea, frame, cv::Scalar(0, 255, 0));
+            const static std::string captions[] = { "Red Light!", "Yellow Light!", "Green Light!", "Left Direction!", "Right Direction!" };
+            const static cv::Scalar colors[] = { cv::Scalar(0, 0, 255), cv::Scalar(131, 232, 252), cv::Scalar(0, 255, 0), cv::Scalar(0, 255, 0), cv::Scalar(0, 255, 0) };
 
-            if (foundRed)
-                putTextAtCenter(frame, "Red Light!", cv::Scalar(0, 0, 255));
-            if (foundYellow)
-                putTextAtCenter(frame, "Yellow Light!", cv::Scalar(131, 232, 252));
-            if (foundLeft)
-                putTextAtCenter(frame, "Left Direction!", cv::Scalar(0, 255, 0));
-            if (foundRight)
-                putTextAtCenter(frame, "Right Direction!", cv::Scalar(0, 255, 0));
-            if (foundGreen)
-                putTextAtCenter(frame, "Green Light!", cv::Scalar(0, 255, 0));
+            std::vector<Contour> found[] = {
+                findShapes(Shape::Circle, redMasked, minArea, maxArea),
+                findShapes(Shape::Circle, yellowMasked, minArea, maxArea),
+                findShapes(Shape::Circle, greenMasked, minArea, maxArea),
+                findShapes(Shape::Left, greenInverse, minArea, maxArea),
+                findShapes(Shape::Right, greenInverse, minArea, maxArea)
+            };
+
+            for (int i = 0; i < 5; ++i)
+            {
+                if (!found[i].empty())
+                {
+                    cv::drawContours(frame, found[i], -1, colors[i], 2);
+                    putTextAtCenter(frame, captions[i], colors[i]);
+                }
+            }
 
             cv::imshow("Result", frame);
         }
